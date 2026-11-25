@@ -1,0 +1,28 @@
+relationship FK_Fact_Frecuencia_Tallas_Dim_Semana
+	fromColumn: Fact_Frecuencia_Tallas.ID_Semana
+	toColumn: Dim_Semana.ID_Semana
+
+relationship FK_Fact_Frecuencia_Tallas_Dim_Zona
+	fromColumn: Fact_Frecuencia_Tallas.ID_Zona
+	toColumn: Dim_Zona.ID_Zona
+
+relationship FK_Fact_Frecuencia_Tallas_Dim_Especie
+	fromColumn: Fact_Frecuencia_Tallas.ID_Especie
+	toColumn: Dim_Especie.ID_Especie
+
+relationship FK_Fact_Captura_Lance_Dim_Semana
+	fromColumn: Fact_Captura_Lance.ID_Semana
+	toColumn: Dim_Semana.ID_Semana
+
+relationship FK_Fact_Captura_Lance_Dim_Zona
+	fromColumn: Fact_Captura_Lance.ID_Zona
+	toColumn: Dim_Zona.ID_Zona
+
+relationship FK_Fact_Captura_Lance_Dim_Especie
+	fromColumn: Fact_Captura_Lance.ID_Especie
+	toColumn: Dim_Especie.ID_Especie
+
+relationship FK_Fact_Captura_Lance_Dim_Barco
+	fromColumn: Fact_Captura_Lance.Cod_Barco
+	toColumn: Dim_Barco.Cod_Barco
+

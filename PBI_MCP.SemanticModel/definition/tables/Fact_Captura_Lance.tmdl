@@ -1,0 +1,202 @@
+/// Tabla de hechos de proporción de especies por lance y viaje (origen: hoja C_PINV PROPORCION SP).
+table Fact_Captura_Lance
+	lineageTag: 313b505d-f657-4590-a2cc-faa8859941fe
+
+	column ID_Lance_Registro
+		dataType: int64
+		isKey
+		lineageTag: ec745874-567e-4f83-a1e9-8f333416534c
+		summarizeBy: none
+		sourceColumn: ID_Lance_Registro
+
+	column ID_Semana
+		dataType: int64
+		isHidden
+		lineageTag: 7223c9e8-474a-43f3-bd5b-614e980676a9
+		summarizeBy: none
+		sourceColumn: ID_Semana
+
+	column ID_Zona
+		dataType: int64
+		isHidden
+		lineageTag: 460922ba-32c5-4d60-b2da-26bc1e12569e
+		summarizeBy: none
+		sourceColumn: ID_Zona
+
+	column ID_Especie
+		dataType: int64
+		isHidden
+		lineageTag: 0c173bf7-6174-4421-90b0-bffce1c1b546
+		summarizeBy: none
+		sourceColumn: ID_Especie
+
+	column Cod_Barco
+		dataType: int64
+		isHidden
+		lineageTag: f8bee854-1632-4a32-8830-e57974517c07
+		summarizeBy: none
+		sourceColumn: Cod_Barco
+
+	column Cod_Especie
+		dataType: int64
+		lineageTag: 34520fc3-af33-4eaf-9764-bf1f8193e6de
+		summarizeBy: none
+		sourceColumn: Cod_Especie
+
+	column Puerto_Recalada
+		dataType: int64
+		lineageTag: 06ccce7b-a978-4e14-b8f7-6debd08f3eff
+		summarizeBy: none
+		sourceColumn: Puerto_Recalada
+
+	column Cod_Pesqueria
+		dataType: int64
+		lineageTag: 4c303b7b-cbdc-4395-bda7-94c0df3fed09
+		summarizeBy: none
+		sourceColumn: Cod_Pesqueria
+
+	column Origen_Viaje
+		dataType: int64
+		lineageTag: 20d027eb-9bda-46e6-bc81-8250740af931
+		summarizeBy: none
+		sourceColumn: Origen_Viaje
+
+	column Fecha_Hora_Recalada
+		dataType: dateTime
+		formatString: dd-MM-yyyy HH:mm:ss
+		lineageTag: 7a50068e-ccec-453d-b8cb-dbe4009ede80
+		sourceColumn: Fecha_Hora_Recalada
+
+	column Fecha_Lance
+		dataType: dateTime
+		formatString: dd-MM-yyyy HH:mm:ss
+		lineageTag: c55afe89-cf48-4f23-87dd-906ee8a49c7c
+		sourceColumn: Fecha_Lance
+
+	column Numero_Lance_Ex
+		dataType: int64
+		lineageTag: 07323880-e11a-4580-93c2-ee7010ceb2e8
+		summarizeBy: none
+		sourceColumn: Numero_Lance_Ex
+
+	column Latitud_DMS
+		dataType: int64
+		lineageTag: a6a4130b-07d7-4176-ace7-c22664df019a
+		summarizeBy: none
+		sourceColumn: Latitud_DMS
+
+	column Longitud_DMS
+		dataType: int64
+		lineageTag: 8172029f-3749-4e9b-a256-cc2cf0961721
+		summarizeBy: none
+		sourceColumn: Longitud_DMS
+
+	column Latitud
+		dataType: double
+		formatString: 0.000000
+		lineageTag: e446c512-1c22-4233-9834-0afd2f6a88bd
+		dataCategory: Latitude
+		summarizeBy: none
+		sourceColumn: Latitud
+
+	column Longitud
+		dataType: double
+		formatString: 0.000000
+		lineageTag: 1428b47b-9023-4eb9-a23c-0b81bf2de63f
+		dataCategory: Longitude
+		summarizeBy: none
+		sourceColumn: Longitud
+
+	column Estado_Especimen
+		dataType: int64
+		lineageTag: ef55a5f4-9ff8-402d-b03a-b843df083ce2
+		summarizeBy: none
+		sourceColumn: Estado_Especimen
+
+	column Frecuencia
+		dataType: int64
+		formatString: #,0
+		lineageTag: 9e28b930-ae2a-4bb1-a203-1074c70d96a4
+		summarizeBy: sum
+		sourceColumn: Frecuencia
+
+	column Peso
+		dataType: double
+		formatString: #,0.0
+		lineageTag: 41433aa2-711a-45c0-9b74-ce7bbbd149ca
+		summarizeBy: sum
+		sourceColumn: Peso
+
+	column Ejem_Por_Litro
+		dataType: int64
+		formatString: #,0
+		lineageTag: 8ac00442-fd17-4f6e-a786-87f733be80cd
+		summarizeBy: average
+		sourceColumn: Ejem_Por_Litro
+
+	column Peso_Por_Litro
+		dataType: double
+		formatString: #,0.0
+		lineageTag: c33f2b9e-0dea-442e-91ac-82a58ced1179
+		summarizeBy: average
+		sourceColumn: Peso_Por_Litro
+
+	column Captura_Viaje
+		dataType: double
+		formatString: #,0.0
+		lineageTag: b6e228ca-4c4a-4af4-8b49-eaa5ae019473
+		summarizeBy: none
+		sourceColumn: Captura_Viaje
+
+	column Captura_Viaje_Lance_Especie
+		dataType: double
+		formatString: #,0.0
+		lineageTag: 664302ce-6dbe-4b01-8031-e637a7bb0e49
+		summarizeBy: none
+		sourceColumn: Captura_Viaje_Lance_Especie
+
+	partition Fact_Captura_Lance = m
+		mode: import
+		queryGroup: 03_Hechos
+		source =
+				let
+				    OrigenStagingC = Stg_C_PINV_PROPORCION_SP,
+				    FiltrarFilasSinViajeNiLance = Table.SelectRows(OrigenStagingC, each [COD_BARCO] <> null),
+				    CombinarConDimZona = Table.NestedJoin(FiltrarFilasSinViajeNiLance, {"ZONA_PINV"}, Dim_Zona, {"Zona_PINV"}, "ZonaDim", JoinKind.LeftOuter),
+				    ExpandirIdZona = Table.ExpandTableColumn(CombinarConDimZona, "ZonaDim", {"ID_Zona"}, {"ID_Zona"}),
+				    CombinarConDimEspecie = Table.NestedJoin(ExpandirIdZona, {"ESPECIE"}, Dim_Especie, {"Especie"}, "EspecieDim", JoinKind.LeftOuter),
+				    ExpandirIdEspecie = Table.ExpandTableColumn(CombinarConDimEspecie, "EspecieDim", {"ID_Especie"}, {"ID_Especie"}),
+				    AgregarClaveRegistroLance = Table.AddIndexColumn(ExpandirIdEspecie, "ID_Lance_Registro", 1, 1, Int64.Type),
+				    SeleccionarYOrdenarColumnas = Table.SelectColumns(AgregarClaveRegistroLance, {
+				        "ID_Lance_Registro", "ID_SEMANA", "ID_Zona", "ID_Especie", "COD_BARCO",
+				        "COD_ESPECIE", "PUERTO_RECALADA", "COD_PESQUERIA", "ORIGEN_VIAJE",
+				        "FECHA_HORA_RECALADA", "FECHA_LANCE", "NUMERO_LANCE_EX",
+				        "LATITUD", "LONGITUD", "LAT", "LONG", "ESTADO_ESPECIMEN",
+				        "FRECUENCIA", "PESO", "EJEM_POR_LITRO", "PESO_POR_LITRO",
+				        "CAPTURA_VIAJE", "CAPTURA_VIAJE_LANCE_ESPECIE"
+				    }),
+				    RenombrarColumnasHechos = Table.RenameColumns(SeleccionarYOrdenarColumnas, {
+				        {"ID_SEMANA", "ID_Semana"},
+				        {"COD_BARCO", "Cod_Barco"},
+				        {"COD_ESPECIE", "Cod_Especie"},
+				        {"PUERTO_RECALADA", "Puerto_Recalada"},
+				        {"COD_PESQUERIA", "Cod_Pesqueria"},
+				        {"ORIGEN_VIAJE", "Origen_Viaje"},
+				        {"FECHA_HORA_RECALADA", "Fecha_Hora_Recalada"},
+				        {"FECHA_LANCE", "Fecha_Lance"},
+				        {"NUMERO_LANCE_EX", "Numero_Lance_Ex"},
+				        {"LATITUD", "Latitud_DMS"},
+				        {"LONGITUD", "Longitud_DMS"},
+				        {"LAT", "Latitud"},
+				        {"LONG", "Longitud"},
+				        {"ESTADO_ESPECIMEN", "Estado_Especimen"},
+				        {"FRECUENCIA", "Frecuencia"},
+				        {"PESO", "Peso"},
+				        {"EJEM_POR_LITRO", "Ejem_Por_Litro"},
+				        {"PESO_POR_LITRO", "Peso_Por_Litro"},
+				        {"CAPTURA_VIAJE", "Captura_Viaje"},
+				        {"CAPTURA_VIAJE_LANCE_ESPECIE", "Captura_Viaje_Lance_Especie"}
+				    })
+				in
+				    RenombrarColumnasHechos
+

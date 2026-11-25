@@ -1,0 +1,105 @@
+/// Dimensión temporal semanal/boletín derivada de ambas hojas origen.
+table Dim_Semana
+	lineageTag: f156d487-1cc1-4bd9-91e9-9fb3f3b5a6d3
+
+	column ID_Semana
+		dataType: int64
+		isKey
+		lineageTag: b62c3797-330c-4c2e-aa28-9555b050bfc4
+		summarizeBy: none
+		sourceColumn: ID_Semana
+
+	column Periodo_Reclutamiento
+		dataType: string
+		lineageTag: 297edb3b-839b-4bf5-b234-9e211c16886a
+		sourceColumn: Periodo_Reclutamiento
+
+	column Anio
+		dataType: int64
+		lineageTag: ac3746d3-feb8-4a52-943e-f68c14805ee6
+		summarizeBy: none
+		sourceColumn: Anio
+
+	column Semana
+		dataType: int64
+		lineageTag: 8a69a3d3-14ab-4784-bb94-299ce8515d5e
+		summarizeBy: none
+		sourceColumn: Semana
+
+	column Boletin
+		dataType: string
+		lineageTag: fc154279-0d82-43e8-95ea-0c9348b82c32
+		sourceColumn: Boletin
+
+	column Periodo_Texto
+		dataType: string
+		lineageTag: ec7433ba-3d7f-4f1b-be6e-0675f105d07d
+		sourceColumn: Periodo_Texto
+
+	column Fecha_Inicio
+		dataType: dateTime
+		formatString: dd-MM-yyyy
+		lineageTag: c999e775-759a-4d68-8358-f12153bde81e
+		sourceColumn: Fecha_Inicio
+
+	column Fecha_Fin
+		dataType: dateTime
+		formatString: dd-MM-yyyy
+		lineageTag: 6c4d583e-ceb8-4cd9-ad41-10ed9b15d892
+		sourceColumn: Fecha_Fin
+
+	column Reporte
+		dataType: string
+		lineageTag: d78c887d-32a7-4a4a-81ad-193e2e38dd3e
+		sourceColumn: Reporte
+
+	partition Dim_Semana = m
+		mode: import
+		queryGroup: 02_Dimensiones
+		source =
+				let
+				    OrigenSemanaA = Table.SelectColumns(Stg_A_PINV_RECL_R, {"ID_SEMANA", "PERIODO_RECLT", "AÑO", "SEM", "BOLETIN", "PERIODO", "REPORTE"}),
+				    OrigenSemanaC = Table.SelectColumns(Stg_C_PINV_PROPORCION_SP, {"ID_SEMANA", "PERIODO_RECLT", "AÑO", "SEM", "BOLETIN", "PERIODO", "REPORTE"}),
+				    UnirSemanas = Table.Combine({OrigenSemanaA, OrigenSemanaC}),
+				    EliminarDuplicadosSemana = Table.Distinct(UnirSemanas, {"ID_SEMANA"}),
+				    OrdenarPorSemana = Table.Sort(EliminarDuplicadosSemana, {{"ID_SEMANA", Order.Ascending}}),
+				    ExtraerFechaInicio = Table.AddColumn(OrdenarPorSemana, "Fecha_Inicio", each let
+				        MapaMeses = [enero=1, febrero=2, marzo=3, abril=4, mayo=5, junio=6, julio=7, agosto=8, septiembre=9, octubre=10, noviembre=11, diciembre=12],
+				        PartesAl = Text.Split([PERIODO], " al "),
+				        InicioBruto = Text.Trim(PartesAl{0}),
+				        FinBruto = Text.Trim(Text.Replace(Text.Replace(PartesAl{1}, ",", ""), " de ", " ")),
+				        PartesFin = List.Select(Text.Split(FinBruto, " "), each _ <> ""),
+				        MesFin = Record.Field(MapaMeses, Text.Lower(PartesFin{1})),
+				        AnioFin = Number.From(PartesFin{2}),
+				        InicioLimpio = Text.Trim(Text.Replace(InicioBruto, " de ", " ")),
+				        PartesInicio = List.Select(Text.Split(InicioLimpio, " "), each _ <> ""),
+				        DiaInicio = Number.From(PartesInicio{0}),
+				        MesInicio = if List.Count(PartesInicio) >= 2 then Record.Field(MapaMeses, Text.Lower(PartesInicio{1})) else MesFin,
+				        AnioInicio = if List.Count(PartesInicio) >= 3 then Number.From(PartesInicio{2}) else if MesInicio > MesFin then AnioFin - 1 else AnioFin
+				    in
+				        #date(AnioInicio, MesInicio, DiaInicio), type date),
+				    ExtraerFechaFin = Table.AddColumn(ExtraerFechaInicio, "Fecha_Fin", each let
+				        MapaMeses = [enero=1, febrero=2, marzo=3, abril=4, mayo=5, junio=6, julio=7, agosto=8, septiembre=9, octubre=10, noviembre=11, diciembre=12],
+				        PartesAl = Text.Split([PERIODO], " al "),
+				        FinBruto = Text.Trim(Text.Replace(Text.Replace(PartesAl{1}, ",", ""), " de ", " ")),
+				        PartesFin = List.Select(Text.Split(FinBruto, " "), each _ <> ""),
+				        DiaFin = Number.From(PartesFin{0}),
+				        MesFin = Record.Field(MapaMeses, Text.Lower(PartesFin{1})),
+				        AnioFin = Number.From(PartesFin{2})
+				    in
+				        #date(AnioFin, MesFin, DiaFin), type date),
+				    RenombrarColumnasDimension = Table.RenameColumns(ExtraerFechaFin, {
+				        {"ID_SEMANA", "ID_Semana"},
+				        {"PERIODO_RECLT", "Periodo_Reclutamiento"},
+				        {"AÑO", "Anio"},
+				        {"SEM", "Semana"},
+				        {"BOLETIN", "Boletin"},
+				        {"PERIODO", "Periodo_Texto"},
+				        {"REPORTE", "Reporte"}
+				    }),
+				    ReordenarColumnas = Table.ReorderColumns(RenombrarColumnasDimension, {
+				        "ID_Semana", "Periodo_Reclutamiento", "Anio", "Semana", "Boletin", "Periodo_Texto", "Fecha_Inicio", "Fecha_Fin", "Reporte"
+				    })
+				in
+				    ReordenarColumnas
+

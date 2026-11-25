@@ -1,0 +1,33 @@
+/// Dimensión de embarcaciones extraída de C_PINV PROPORCION SP.
+table Dim_Barco
+	lineageTag: 42a65908-24f4-44f5-88f3-6ee9e1bf02cf
+
+	column Cod_Barco
+		dataType: int64
+		isKey
+		lineageTag: 69606898-2ab6-4ef0-ab17-4d17ed13fce9
+		summarizeBy: none
+		sourceColumn: Cod_Barco
+
+	column Nombre_Barco
+		dataType: string
+		lineageTag: 7f2c2f51-413f-4503-9dd7-c089a9acb968
+		sourceColumn: Nombre_Barco
+
+	partition Dim_Barco = m
+		mode: import
+		queryGroup: 02_Dimensiones
+		source =
+				let
+				    OrigenStagingC = Stg_C_PINV_PROPORCION_SP,
+				    SeleccionarColumnasBarco = Table.SelectColumns(OrigenStagingC, {"COD_BARCO", "NOMBRE_BARCO"}),
+				    FiltrarBarcosNoNulos = Table.SelectRows(SeleccionarColumnasBarco, each [COD_BARCO] <> null),
+				    EliminarDuplicadosBarco = Table.Distinct(FiltrarBarcosNoNulos, {"COD_BARCO"}),
+				    OrdenarPorCodigoBarco = Table.Sort(EliminarDuplicadosBarco, {{"COD_BARCO", Order.Ascending}}),
+				    RenombrarColumnasDimension = Table.RenameColumns(OrdenarPorCodigoBarco, {
+				        {"COD_BARCO", "Cod_Barco"},
+				        {"NOMBRE_BARCO", "Nombre_Barco"}
+				    })
+				in
+				    RenombrarColumnasDimension
+

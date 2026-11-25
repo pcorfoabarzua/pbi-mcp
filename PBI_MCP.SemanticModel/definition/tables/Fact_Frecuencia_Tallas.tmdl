@@ -1,0 +1,100 @@
+/// Tabla de hechos de frecuencia de tallas de reclutamiento (origen: hoja A_PINV RECL_R ).
+table Fact_Frecuencia_Tallas
+	lineageTag: 4194e204-7af8-45e7-86c8-25f7791daeb3
+
+	column ID_Frecuencia
+		dataType: int64
+		isKey
+		lineageTag: 060aef02-e37f-4091-b284-7f76e681a21b
+		summarizeBy: none
+		sourceColumn: ID_Frecuencia
+
+	column ID_Semana
+		dataType: int64
+		isHidden
+		lineageTag: b69a576e-cce5-4fff-a674-0fb16497e02e
+		summarizeBy: none
+		sourceColumn: ID_Semana
+
+	column ID_Zona
+		dataType: int64
+		isHidden
+		lineageTag: acf8e7b2-ebb7-429f-ac54-8372a9541553
+		summarizeBy: none
+		sourceColumn: ID_Zona
+
+	column ID_Especie
+		dataType: int64
+		isHidden
+		lineageTag: 0c8a0263-0b01-4d85-86b4-0253ae8111d2
+		summarizeBy: none
+		sourceColumn: ID_Especie
+
+	column Longitud_Muestra
+		dataType: double
+		formatString: 0.0
+		lineageTag: c04a1581-0559-4f8e-8b39-7a7daddc82f8
+		summarizeBy: none
+		sourceColumn: Longitud_Muestra
+
+	column Total_Individuos_Long
+		dataType: int64
+		formatString: #,0
+		lineageTag: fa8a7186-1e53-4d06-8fd1-751e7a6bef0a
+		summarizeBy: sum
+		sourceColumn: Total_Individuos_Long
+
+	column Volumen_Total_Global
+		dataType: double
+		formatString: #,0.0
+		lineageTag: 6bb5e6db-c3d1-4fec-9112-5253c11521b5
+		summarizeBy: none
+		sourceColumn: Volumen_Total_Global
+
+	column Frecuencia_Ponderada
+		dataType: double
+		formatString: 0.0000
+		lineageTag: a6e9c0f6-5a98-47f2-b142-a8ab7bb79410
+		summarizeBy: sum
+		sourceColumn: Frecuencia_Ponderada
+
+	column Moda
+		dataType: double
+		formatString: 0.0
+		lineageTag: b11e7876-c112-4eb3-9ba3-5aa1296aa52a
+		summarizeBy: none
+		sourceColumn: Moda
+
+	column Observacion
+		dataType: string
+		lineageTag: cfc732d2-f897-4d85-b2d9-08facc4f9f29
+		sourceColumn: Observacion
+
+	partition Fact_Frecuencia_Tallas = m
+		mode: import
+		queryGroup: 03_Hechos
+		source =
+				let
+				    OrigenStagingA = Stg_A_PINV_RECL_R,
+				    CombinarConDimZona = Table.NestedJoin(OrigenStagingA, {"ZONA_PINV"}, Dim_Zona, {"Zona_PINV"}, "ZonaDim", JoinKind.LeftOuter),
+				    ExpandirIdZona = Table.ExpandTableColumn(CombinarConDimZona, "ZonaDim", {"ID_Zona"}, {"ID_Zona"}),
+				    CombinarConDimEspecie = Table.NestedJoin(ExpandirIdZona, {"ESPECIE"}, Dim_Especie, {"Especie"}, "EspecieDim", JoinKind.LeftOuter),
+				    ExpandirIdEspecie = Table.ExpandTableColumn(CombinarConDimEspecie, "EspecieDim", {"ID_Especie"}, {"ID_Especie"}),
+				    AgregarClaveFrecuencia = Table.AddIndexColumn(ExpandirIdEspecie, "ID_Frecuencia", 1, 1, Int64.Type),
+				    SeleccionarYOrdenarColumnas = Table.SelectColumns(AgregarClaveFrecuencia, {
+				        "ID_Frecuencia", "ID_SEMANA", "ID_Zona", "ID_Especie",
+				        "LONGITUD_MUESTRA", "TOTAL_INDIVIDUOS_LONG", "VOLUMEN_TOTAL_GLOBAL",
+				        "FRECUENCIA_PONDERADA", "MODA", "OBSERVACION"
+				    }),
+				    RenombrarColumnasHechos = Table.RenameColumns(SeleccionarYOrdenarColumnas, {
+				        {"ID_SEMANA", "ID_Semana"},
+				        {"LONGITUD_MUESTRA", "Longitud_Muestra"},
+				        {"TOTAL_INDIVIDUOS_LONG", "Total_Individuos_Long"},
+				        {"VOLUMEN_TOTAL_GLOBAL", "Volumen_Total_Global"},
+				        {"FRECUENCIA_PONDERADA", "Frecuencia_Ponderada"},
+				        {"MODA", "Moda"},
+				        {"OBSERVACION", "Observacion"}
+				    })
+				in
+				    RenombrarColumnasHechos
+

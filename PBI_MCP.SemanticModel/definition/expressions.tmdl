@@ -1,0 +1,130 @@
+/// Ruta del archivo Excel REPORTE PINV RECLUTAMIENTO.xlsx
+expression RutaArchivoExcel = "c:\Users\felipe.abarzua\Desktop\workspace\PBI_Alejandra\data\REPORTE PINV RECLUTAMIENTO.xlsx" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+	lineageTag: 946e123f-1cf7-4c5e-8d5b-60254b47e17a
+	queryGroup: 01_Staging
+
+	annotation PBI_ResultType = Text
+
+/// Staging y limpieza de la hoja A_PINV RECL_R  del archivo REPORTE PINV RECLUTAMIENTO.xlsx
+expression Stg_A_PINV_RECL_R =
+		let
+		    OrigenArchivoExcel = Excel.Workbook(File.Contents(RutaArchivoExcel), null, true),
+		    SeleccionarHoja = OrigenArchivoExcel{[Item="A_PINV RECL_R ",Kind="Sheet"]}[Data],
+		    PromoverEncabezados = Table.PromoteHeaders(SeleccionarHoja, [PromoteAllScalars=true]),
+		    EliminarFilasVacias = Table.SelectRows(PromoverEncabezados, each not List.IsEmpty(List.RemoveMatchingItems(Record.FieldValues(_), {"", null}))),
+		    RenombrarColumnas = Table.RenameColumns(EliminarFilasVacias, {
+		        {"FRECUENCIA PONDERADA", "FRECUENCIA_PONDERADA"},
+		        {"OBSERVACIÓN", "OBSERVACION"}
+		    }),
+		    LimpiarEspaciosYSaltosTexto = Table.TransformColumns(RenombrarColumnas, {
+		        {"PERIODO_RECLT", each if _ = null then null else let t = Text.Trim(Text.Clean(Text.From(_))) in if t = "" then null else t, type text},
+		        {"BOLETIN", each if _ = null then null else let t = Text.Trim(Text.Clean(Text.From(_))) in if t = "" then null else t, type text},
+		        {"PERIODO", each if _ = null then null else let t = Text.Trim(Text.Clean(Text.From(_))) in if t = "" then null else t, type text},
+		        {"ESPECIE", each if _ = null then null else let t = Text.Trim(Text.Clean(Text.From(_))) in if t = "" then null else t, type text},
+		        {"ZONA_PINV", each if _ = null then null else let t = Text.Trim(Text.Clean(Text.From(_))) in if t = "" then null else t, type text},
+		        {"REGION", each if _ = null then null else let t = Text.Trim(Text.Clean(Text.From(_))) in if t = "" then null else t, type text},
+		        {"OBSERVACION", each if _ = null then null else let t = Text.Trim(Text.Clean(Text.Replace(Text.From(_), "#(lf)", " "))) in if t = "" then null else t, type text},
+		        {"REPORTE", each if _ = null then null else let t = Text.Trim(Text.Clean(Text.From(_))) in if t = "" then null else t, type text},
+		        {"LLAVE", each if _ = null then null else let t = Text.Trim(Text.Clean(Text.From(_))) in if t = "" then null else t, type text}
+		    }),
+		    NormalizarObservacionYPeriodo = Table.TransformColumns(LimpiarEspaciosYSaltosTexto, {
+		        {"OBSERVACION", each if _ = null then null else Text.Replace(Text.Combine(List.Select(Text.Split(_, " "), each _ <> ""), " "), "Veda bológica", "Veda biológica"), type text},
+		        {"PERIODO", each if _ = null then null else Text.Replace(_, "02 al 08 noviembre, 2026", "02 al 08 de noviembre, 2026"), type text},
+		        {"REPORTE", each if _ = null then null else Text.Replace(_, "02 al 08 noviembre, 2026", "02 al 08 de noviembre, 2026"), type text}
+		    }),
+		    CompletarEspecieNula = Table.ReplaceValue(NormalizarObservacionYPeriodo, null, "Sin información", Replacer.ReplaceValue, {"ESPECIE"}),
+		    CompletarRegionNula = Table.AddColumn(CompletarEspecieNula, "REGION_LIMPIA", each if [REGION] <> null then [REGION] else [ZONA_PINV], type text),
+		    ReemplazarColumnaRegion = Table.RenameColumns(Table.RemoveColumns(CompletarRegionNula, {"REGION"}), {{"REGION_LIMPIA", "REGION"}}),
+		    AsignarTiposDeDatos = Table.TransformColumnTypes(ReemplazarColumnaRegion, {
+		        {"PERIODO_RECLT", type text},
+		        {"AÑO", Int64.Type},
+		        {"SEM", Int64.Type},
+		        {"BOLETIN", type text},
+		        {"PERIODO", type text},
+		        {"ESPECIE", type text},
+		        {"ZONA_PINV", type text},
+		        {"REGION", type text},
+		        {"LONGITUD_MUESTRA", type number},
+		        {"TOTAL_INDIVIDUOS_LONG", Int64.Type},
+		        {"VOLUMEN_TOTAL_GLOBAL", type number},
+		        {"FRECUENCIA_PONDERADA", type number},
+		        {"MODA", type number},
+		        {"OBSERVACION", type text},
+		        {"REPORTE", type text},
+		        {"LLAVE", type text}
+		    }),
+		    AgregarClaveSemana = Table.AddColumn(AsignarTiposDeDatos, "ID_SEMANA", each [AÑO] * 100 + [SEM], Int64.Type)
+		in
+		    AgregarClaveSemana
+	lineageTag: 939cb707-e100-42fc-a426-c52e42a628dc
+	queryGroup: 01_Staging
+
+/// Staging y limpieza de la hoja C_PINV PROPORCION SP del archivo REPORTE PINV RECLUTAMIENTO.xlsx
+expression Stg_C_PINV_PROPORCION_SP =
+		let
+		    OrigenArchivoExcel = Excel.Workbook(File.Contents(RutaArchivoExcel), null, true),
+		    SeleccionarHoja = OrigenArchivoExcel{[Item="C_PINV PROPORCION SP",Kind="Sheet"]}[Data],
+		    PromoverEncabezados = Table.PromoteHeaders(SeleccionarHoja, [PromoteAllScalars=true]),
+		    EliminarFilasVacias = Table.SelectRows(PromoverEncabezados, each not List.IsEmpty(List.RemoveMatchingItems(Record.FieldValues(_), {"", null}))),
+		    EliminarColumnaObservacionVacia = Table.RemoveColumns(EliminarFilasVacias, {"OBSERVACIÓN"}),
+		    EstandarizarNombreColumnaEspecie = Table.RenameColumns(EliminarColumnaObservacionVacia, {{"ESPECIES", "ESPECIE"}}),
+		    LimpiarEspaciosTexto = Table.TransformColumns(EstandarizarNombreColumnaEspecie, {
+		        {"PERIODO_RECLT", each if _ = null then null else let t = Text.Trim(Text.Clean(Text.From(_))) in if t = "" then null else t, type text},
+		        {"BOLETIN", each if _ = null then null else let t = Text.Trim(Text.Clean(Text.From(_))) in if t = "" then null else t, type text},
+		        {"PERIODO", each if _ = null then null else let t = Text.Trim(Text.Clean(Text.From(_))) in if t = "" then null else t, type text},
+		        {"NOMBRE_BARCO", each if _ = null then null else let t = Text.Trim(Text.Clean(Text.From(_))) in if t = "" then null else t, type text},
+		        {"ESPECIE", each if _ = null then null else let t = Text.Trim(Text.Clean(Text.From(_))) in if t = "" then null else t, type text},
+		        {"ZONA_PINV", each if _ = null then null else let t = Text.Trim(Text.Clean(Text.From(_))) in if t = "" then null else t, type text},
+		        {"REGION", each if _ = null then null else let t = Text.Trim(Text.Clean(Text.From(_))) in if t = "" then null else t, type text},
+		        {"REPORTE", each if _ = null then null else let t = Text.Trim(Text.Clean(Text.From(_))) in if t = "" then null else t, type text},
+		        {"LLAVE", each if _ = null then null else let t = Text.Trim(Text.Clean(Text.From(_))) in if t = "" then null else t, type text}
+		    }),
+		    NormalizarPeriodo = Table.TransformColumns(LimpiarEspaciosTexto, {
+		        {"PERIODO", each if _ = null then null else Text.Replace(_, "02 al 08 noviembre, 2026", "02 al 08 de noviembre, 2026"), type text}
+		    }),
+		    CompletarReporteNulo = Table.AddColumn(NormalizarPeriodo, "REPORTE_LIMPIO", each if [REPORTE] <> null then Text.Replace([REPORTE], "02 al 08 noviembre, 2026", "02 al 08 de noviembre, 2026") else [BOLETIN] & ": Semana " & Text.From([SEM]) & " (" & [PERIODO] & ")", type text),
+		    ReemplazarColumnaReporte = Table.RenameColumns(Table.RemoveColumns(CompletarReporteNulo, {"REPORTE"}), {{"REPORTE_LIMPIO", "REPORTE"}}),
+		    CompletarRegionNula = Table.AddColumn(ReemplazarColumnaReporte, "REGION_LIMPIA", each if [REGION] <> null then [REGION] else [ZONA_PINV], type text),
+		    ReemplazarColumnaRegion = Table.RenameColumns(Table.RemoveColumns(CompletarRegionNula, {"REGION"}), {{"REGION_LIMPIA", "REGION"}}),
+		    ConvertirFechasMixtas = Table.TransformColumns(ReemplazarColumnaRegion, {
+		        {"FECHA_HORA_RECALADA", each if _ = null then null else DateTime.From(_, "es-CL"), type datetime},
+		        {"FECHA_LANCE", each if _ = null then null else DateTime.From(_, "es-CL"), type datetime}
+		    }),
+		    AsignarTiposDeDatos = Table.TransformColumnTypes(ConvertirFechasMixtas, {
+		        {"PERIODO_RECLT", type text},
+		        {"AÑO", Int64.Type},
+		        {"SEM", Int64.Type},
+		        {"BOLETIN", type text},
+		        {"PERIODO", type text},
+		        {"COD_BARCO", Int64.Type},
+		        {"NOMBRE_BARCO", type text},
+		        {"FECHA_HORA_RECALADA", type datetime},
+		        {"PUERTO_RECALADA", Int64.Type},
+		        {"COD_PESQUERIA", Int64.Type},
+		        {"ORIGEN_VIAJE", Int64.Type},
+		        {"FECHA_LANCE", type datetime},
+		        {"COD_ESPECIE", Int64.Type},
+		        {"NUMERO_LANCE_EX", Int64.Type},
+		        {"LATITUD", Int64.Type},
+		        {"LONGITUD", Int64.Type},
+		        {"ESTADO_ESPECIMEN", Int64.Type},
+		        {"FRECUENCIA", Int64.Type},
+		        {"PESO", type number},
+		        {"EJEM_POR_LITRO", Int64.Type},
+		        {"PESO_POR_LITRO", type number},
+		        {"CAPTURA_VIAJE", type number},
+		        {"CAPTURA_VIAJE_LANCE_ESPECIE", type number},
+		        {"ZONA_PINV", type text},
+		        {"REGION", type text},
+		        {"ESPECIE", type text},
+		        {"LAT", type number},
+		        {"LONG", type number},
+		        {"REPORTE", type text},
+		        {"LLAVE", type text}
+		    }),
+		    AgregarClaveSemana = Table.AddColumn(AsignarTiposDeDatos, "ID_SEMANA", each [AÑO] * 100 + [SEM], Int64.Type)
+		in
+		    AgregarClaveSemana
+	lineageTag: ab5723cb-3856-4e89-b21f-557a0ac2563e
+	queryGroup: 01_Staging
+

@@ -1,0 +1,40 @@
+/// Dimensión geográfica de zonas PINV y regiones derivada de ambas hojas origen.
+table Dim_Zona
+	lineageTag: 98b94366-1271-4789-8540-e858510a3d29
+
+	column ID_Zona
+		dataType: int64
+		isKey
+		lineageTag: e14736ea-7929-4b43-8a4c-4448bbc56a44
+		summarizeBy: none
+		sourceColumn: ID_Zona
+
+	column Zona_PINV
+		dataType: string
+		lineageTag: a6cd2306-8e5b-48bd-a6bd-2fac69917d9f
+		sourceColumn: Zona_PINV
+
+	column Region
+		dataType: string
+		lineageTag: 5540eb66-e369-49ac-be9a-120d3a48181e
+		sourceColumn: Region
+
+	partition Dim_Zona = m
+		mode: import
+		queryGroup: 02_Dimensiones
+		source =
+				let
+				    OrigenZonaA = Table.SelectColumns(Stg_A_PINV_RECL_R, {"ZONA_PINV", "REGION"}),
+				    OrigenZonaC = Table.SelectColumns(Stg_C_PINV_PROPORCION_SP, {"ZONA_PINV", "REGION"}),
+				    UnirZonas = Table.Combine({OrigenZonaA, OrigenZonaC}),
+				    EliminarDuplicadosZona = Table.Distinct(UnirZonas, {"ZONA_PINV"}),
+				    OrdenarPorZona = Table.Sort(EliminarDuplicadosZona, {{"ZONA_PINV", Order.Ascending}}),
+				    AgregarClaveZona = Table.AddIndexColumn(OrdenarPorZona, "ID_Zona", 1, 1, Int64.Type),
+				    RenombrarColumnasDimension = Table.RenameColumns(AgregarClaveZona, {
+				        {"ZONA_PINV", "Zona_PINV"},
+				        {"REGION", "Region"}
+				    }),
+				    ReordenarColumnas = Table.ReorderColumns(RenombrarColumnasDimension, {"ID_Zona", "Zona_PINV", "Region"})
+				in
+				    ReordenarColumnas
+

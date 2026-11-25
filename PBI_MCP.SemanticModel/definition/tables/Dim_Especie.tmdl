@@ -1,0 +1,39 @@
+/// Dimensión de especies estandarizada desde ambas hojas origen.
+table Dim_Especie
+	lineageTag: 96f7aa25-747f-45bd-bf8e-3849c648f7ae
+
+	column ID_Especie
+		dataType: int64
+		isKey
+		lineageTag: 14099813-050a-4fe3-ae45-b066aa72af52
+		summarizeBy: none
+		sourceColumn: ID_Especie
+
+	column Especie
+		dataType: string
+		lineageTag: 12fbf7ac-9572-423c-be44-ab07098193c5
+		sourceColumn: Especie
+
+	column Cod_Especie_Principal
+		dataType: int64
+		lineageTag: 29307b19-c622-4b58-9923-7838375c7f8b
+		summarizeBy: none
+		sourceColumn: Cod_Especie_Principal
+
+	partition Dim_Especie = m
+		mode: import
+		queryGroup: 02_Dimensiones
+		source =
+				let
+				    OrigenEspecieA = Table.SelectColumns(Stg_A_PINV_RECL_R, {"ESPECIE"}),
+				    OrigenEspecieC = Table.SelectColumns(Table.SelectRows(Stg_C_PINV_PROPORCION_SP, each [ESPECIE] <> null), {"ESPECIE"}),
+				    UnirEspecies = Table.Combine({OrigenEspecieA, OrigenEspecieC}),
+				    EliminarDuplicadosEspecie = Table.Distinct(UnirEspecies, {"ESPECIE"}),
+				    AsignarIdEspecie = Table.AddColumn(EliminarDuplicadosEspecie, "ID_Especie", each if [ESPECIE] = "Sardina común" then 1 else if [ESPECIE] = "Anchoveta" then 2 else if [ESPECIE] = "Otras sp" then 3 else 99, Int64.Type),
+				    AsignarCodigoPrincipal = Table.AddColumn(AsignarIdEspecie, "Cod_Especie_Principal", each if [ESPECIE] = "Sardina común" then 33 else if [ESPECIE] = "Anchoveta" then 114 else null, Int64.Type),
+				    OrdenarPorIdEspecie = Table.Sort(AsignarCodigoPrincipal, {{"ID_Especie", Order.Ascending}}),
+				    RenombrarColumnasDimension = Table.RenameColumns(OrdenarPorIdEspecie, {{"ESPECIE", "Especie"}}),
+				    ReordenarColumnas = Table.ReorderColumns(RenombrarColumnasDimension, {"ID_Especie", "Especie", "Cod_Especie_Principal"})
+				in
+				    ReordenarColumnas
+

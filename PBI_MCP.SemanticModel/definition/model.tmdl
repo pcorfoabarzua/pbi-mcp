@@ -7,9 +7,33 @@ model Model
 		legacyRedirects
 		returnErrorValuesAsNull
 
+/// Consultas de conexión y limpieza desde el archivo Excel origen (sin carga al modelo).
+queryGroup 01_Staging
+
+	annotation PBI_QueryGroupOrder = 0
+
+/// Tablas de dimensiones del modelo estrella.
+queryGroup 02_Dimensiones
+
+	annotation PBI_QueryGroupOrder = 1
+
+/// Tablas de hechos del modelo estrella.
+queryGroup 03_Hechos
+
+	annotation PBI_QueryGroupOrder = 2
+
 annotation __PBI_TimeIntelligenceEnabled = 1
 
-annotation PBI_ProTooling = ["DevMode"]
+annotation PBI_ProTooling = ["DevMode","MCP-PBIModeling"]
+
+annotation PBI_QueryOrder = ["Dim_Barco","Dim_Semana","Dim_Zona","Dim_Especie","Fact_Frecuencia_Tallas","Fact_Captura_Lance","RutaArchivoExcel","Stg_A_PINV_RECL_R","Stg_C_PINV_PROPORCION_SP"]
+
+ref table Dim_Barco
+ref table Dim_Semana
+ref table Dim_Zona
+ref table Dim_Especie
+ref table Fact_Frecuencia_Tallas
+ref table Fact_Captura_Lance
 
 ref cultureInfo es-CL
 
